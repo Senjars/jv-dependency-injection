@@ -2,7 +2,6 @@ package mate.academy.lib;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import mate.academy.service.FileReaderService;
@@ -14,6 +13,11 @@ import mate.academy.service.impl.ProductServiceImpl;
 
 public class Injector {
     private static final Injector injector = new Injector();
+    private static final Map<Class<?>, Class<?>> IMPLEMENTATIONS = Map.of(
+            ProductParser.class, ProductParserImpl.class,
+            ProductService.class, ProductServiceImpl.class,
+            FileReaderService.class, FileReaderServiceImpl.class
+    );
 
     private final Map<Class<?>, Object> instances = new HashMap<>();
 
@@ -27,13 +31,8 @@ public class Injector {
     }
 
     private Class<?> findImplementation(Class<?> clazz) {
-        Map<Class<?>, Class<?>> implementationMap = new HashMap<>();
-        implementationMap.put(ProductParser.class, ProductParserImpl.class);
-        implementationMap.put(ProductService.class, ProductServiceImpl.class);
-        implementationMap.put(FileReaderService.class, FileReaderServiceImpl.class);
-
         if (clazz.isInterface()) {
-            Class<?> impl = implementationMap.get(clazz);
+            Class<?> impl = IMPLEMENTATIONS.get(clazz);
             if (impl == null) {
                 throw new RuntimeException("No implementation found for interface: "
                         + clazz.getName());
@@ -41,7 +40,7 @@ public class Injector {
             return impl;
         }
 
-        if (!implementationMap.containsValue(clazz)
+        if (!IMPLEMENTATIONS.containsValue(clazz)
                 && !clazz.equals(FileReaderServiceImpl.class)
                 && !clazz.equals(ProductParserImpl.class)
                 && !clazz.equals(ProductServiceImpl.class)) {
@@ -65,8 +64,7 @@ public class Injector {
         try {
             Constructor<?> constructor = clazz.getConstructor();
             object = constructor.newInstance();
-        } catch (NoSuchMethodException | InstantiationException
-                 | IllegalAccessException | InvocationTargetException e) {
+        } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Can't create instance of: " + clazz.getName(), e);
         }
 
